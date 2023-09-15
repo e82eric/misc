@@ -66,11 +66,12 @@ function print_month
 
 function cal
 {
+  param($number = 3)
 	$today = [DateTime]::Now
 
-	print_month $today.AddMonths(-1)
-	Write-Host ""
-	print_month $today
-	Write-Host ""
-	print_month $today.AddMonths(1)
+  for($i = -1; $i -lt $number; $i++)
+  {
+    print_month $today.AddMonths($i)
+    Write-Host ""
+  }
 }
