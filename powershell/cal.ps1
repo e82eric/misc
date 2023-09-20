@@ -1,77 +1,129 @@
-function print_month
+function fill_month_grid
 {
 	param($dateInMonth)
+  $monthNumber = $dateInMonth.Month
 	$numberOfDaysInMonth = [DateTime]::DaysInMonth($dateInMonth.Year, $dateInMonth.Month)
 	$firstDayOfMonth = [DateTime]::new($dateInMonth.Year, $dateInMonth.Month, 1)
 	$firstDayOfWeekNumber = [int]$firstDayOfMonth.DayOfWeek
 
 	$today = [DateTime]::Now
 
-	Write-Host ""
-	Write-Host "$((Get-Culture).DateTimeFormat.GetMonthName($dateInMonth.Month)) $($dateInMonth.Year)"
-	Write-Host "Su Mo Tu We Th Fr Sa"
-	$ctr = 1
-	$weekString = ""
-	for($i = 0; $i -lt 7; $i++)
-	{
-		$foregroundColor = [ConsoleColor]::Red
-		$backgroundColor = [ConsoleColor]::Black
+  $weeks = New-Object object[] 6
 
-		if($dateInMonth.Month -eq $today.Month -And $today.Day -eq $ctr)
-		{
-			$foregroundColor = [ConsoleColor]::Black
-			$backgroundColor = [ConsoleColor]::White
-		}
+  $gridIndex = 0
+  for($i = 0; $i -lt 6; $i++)
+  {
+    $week = New-Object object[] 7
+    for($j = 0; $j -lt 7; $j++)
+    {
+      $dayOfMonthNumber = $gridIndex - $firstDayOfWeekNumber + 1
+      if($gridIndex -lt $firstDayOfWeekNumber -or $gridIndex -ge $numberOfDaysInMonth + $firstDayOfWeekNumber)
+      {
+        $dayObj = @{ IsEmpty = $true }
+      }
+      else
+      {
+        $isToday = $false
+        if($monthNumber -eq $today.Month -And $today.Day -eq $dayOfMonthNumber)
+        {
+          $isToday = $true
+        }
+        $dayObj = @{ IsEmpty = $false; Number = $dayOfMonthNumber; IsToday = $isToday }
+      }
+      $week[$j] = $dayObj
+      $gridIndex++
+    }
+    $weeks[$i] = $week
+  }
 
-		if($i -lt $firstDayOfWeekNumber)
-		{
-			Write-Host -NoNewLine -ForegroundColor $foregroundColor -BackgroundColor $backgroundColor "   "
-		}
-		else
-		{
-			$ctrStr = " $($ctr.ToString())"
-			Write-Host -NoNewLine -ForegroundColor $foregroundColor -BackgroundColor $backgroundColor "$($ctrStr.SubString($ctrStr.Length - 2)) "
-			$ctr++
-		}
-	}
+  @{ Weeks = $weeks; DateInMonth = $dateInMonth }
+}
 
-	$weekString
-	$dayOfWeekCtr = 1
-	$weekString = ""
-	for($i = $ctr; $i -le $numberOfDaysInMonth; $i++)
-	{
-		$foregroundColor = [ConsoleColor]::Red
-		$backgroundColor = [ConsoleColor]::Black
+function print_week
+{
+  param($weekArray)
 
-		if($dateInMonth.Month -eq $today.Month -And $today.Day -eq $i)
-		{
-			$foregroundColor = [ConsoleColor]::Black
-			$backgroundColor = [ConsoleColor]::White
-		}
+  for($i = 0; $i -lt 7; $i++)
+  {
+    if($weekArray[$i].IsToday)
+    {
+      $foregroundColor = [ConsoleColor]::Black
+      $backgroundColor = [ConsoleColor]::White
+    }
+    else
+    {
+      $foregroundColor = [ConsoleColor]::Red
+      $backgroundColor = [ConsoleColor]::Black
+    }
 
-		$iStr = " $($i.ToString())"
-		if($dayOfWeekCtr -lt 7)
-		{
-			Write-Host -NoNewLine -ForegroundColor $foregroundColor -BackgroundColor $backgroundColor "$($iStr.SubString($iStr.Length - 2)) "
-			$dayOfWeekCtr++
-		}
-		else
-		{
-			Write-Host -ForegroundColor $foregroundColor -BackgroundColor $backgroundColor "$($iStr.SubString($iStr.Length - 2)) "
-			$weekString = ""
-			$dayOfWeekCtr = 1
-		}
-	}
+    if($weekArray[$i].IsEmpty)
+    {
+      Write-Host -NoNewLine -ForegroundColor $foregroundColor -BackgroundColor $backgroundColor "   "
+    }
+    else
+    {
+      $iStr = " $($weekArray[$i].Number.ToString())"
+      Write-Host -NoNewLine -ForegroundColor $foregroundColor -BackgroundColor $backgroundColor "$($iStr.SubString($iStr.Length - 2))"
+      Write-Host -NoNewLine " "
+    }
+  }
+}
+
+function print_months_horizontal
+{
+  param($months)
+  foreach($month in $months)
+  {
+    $monthYearHeader = "$((Get-Culture).DateTimeFormat.GetMonthName($month.DateInMonth.Month)) $($month.DateInMonth.Year)"
+    Write-Host -NoNewLine $monthYearHeader.PadRight(20)
+    Write-Host -NoNewLine "     "
+  }
+  Write-Host ""
+  foreach($month in $months)
+  {
+    Write-Host -NoNewLine "Su Mo Tu We Th Fr Sa"
+    Write-Host -NoNewLine "     "
+  }
+  Write-Host ""
+
+  for($i = 0; $i -lt 6; $i++)
+  {
+    foreach($month in $months)
+    {
+      print_week $month.Weeks[$i]
+      Write-Host -NoNewLine "    "
+    }
+    Write-Host ""
+  }
 }
 
 function cal
 {
-  param($number = 3)
+  param(
+    $monthsBack = 6,
+    $monthsForward = 6,
+    [switch]$year = $false
+  )
 	$today = [DateTime]::Now
 
-  for($i = -1; $i -lt $number; $i++)
+  $startMonth = $monthsBack * -1
+  if($year)
   {
-    print_month $today.AddMonths($i)
-    Write-Host ""
+    $startMonth = ($today.Month + 1) * -1
+    $monthsForward = 12 - $today.Month
+  }
+
+  $ctr = 0
+  $i = $startMonth
+  while($i -lt $monthsForward + 1)
+  {
+    $chunk = [Math]::Min(3, ($monthsForward - $i + 1))
+    $months = New-Object object[] $chunk
+    for($j = 0; $j -lt $chunk; $j++)
+    {
+      $months[$j] = fill_month_grid $today.AddMonths($i)
+      $i++
+    }
+    print_months_horizontal $months
   }
 }
