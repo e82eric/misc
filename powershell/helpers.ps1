@@ -69,3 +69,28 @@ function Base64Decode
     $result = [Text.Encoding]::UTF8.GetString($bytes)
     $result
 }
+
+function OpenDirectory
+{
+  $fzfStr = fdir.cmd $args
+  cd $fzfStr
+}
+Set-Alias -name od -value OpenDirectory
+
+function Invoke-CmdScript {
+  param(
+    [String] $scriptName
+  )
+  $cmdLine = """$scriptName"" $args & set"
+  & $Env:SystemRoot\system32\cmd.exe /c $cmdLine |
+  select-string '^([^=]*)=(.*)$' | foreach-object {
+    $varName = $_.Matches[0].Groups[1].Value
+    $varValue = $_.Matches[0].Groups[2].Value
+    set-item Env:$varName $varValue
+  }
+}
+
+function setvcvars
+{
+  Invoke-CmdScript setvcvars.bat
+}
