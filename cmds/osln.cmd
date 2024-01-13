@@ -16,13 +16,6 @@ FOR /F "delims=" %%I IN (
 'dir /s /b /a-d "%_dir%\*.sln" ^| fzf -e --layout reverse --info inline --bind="ctrl-y:execute(echo {} ^| clip)" --preview-window=up --preview="bat.exe --style=numbers --theme=gruvbox-dark --color=always {}"'
 ) DO @SET "_dest=%%I"
 
-ECHO %_dir%
-IF "%_dir:-~4%"==".sln" (
-  ECHO "passed"
-) ELSE (
-  ECHO "not passed"
-  ECHO %_dir%
-)
 IF [%_dest%] == [] EXIT /B
 
 :RunRider
