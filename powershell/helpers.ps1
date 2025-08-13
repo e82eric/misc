@@ -92,5 +92,7 @@ function Invoke-CmdScript {
 
 function setvcvars
 {
-  Invoke-CmdScript setvcvars.bat
+  $installationPath = vswhere.exe -prerelease -latest -property installationPath
+  $vcvars = "$($installationPath)\VC\Auxiliary\Build\vcvars64.bat"
+  Invoke-CmdScript $vcvars
 }
